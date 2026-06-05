@@ -1,0 +1,15 @@
+cart:
+  fullnameOverride: carts
+  app:
+    persistence:
+      provider: dynamodb
+      dynamodb:
+        tableName: project-bedrock-cluster-carts
+        createTable: false
+  dynamodb:
+    create: false
+  extraEnv:
+    - name: AWS_REGION
+      value: "us-east-1"
+    - name: AWS_DEFAULT_REGION
+      value: "us-east-1"

@@ -64,7 +64,7 @@ resource "aws_db_instance" "mysql" {
 resource "aws_db_instance" "postgresql" {
   identifier             = "${var.cluster_name}-postgresql"
   engine                 = "postgres"
-  engine_version         = "15.10"
+  engine_version         = "16.9"
   instance_class         = "db.t3.micro"
   allocated_storage      = 20
   storage_type           = "gp2"

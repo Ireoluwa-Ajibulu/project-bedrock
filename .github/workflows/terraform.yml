@@ -138,24 +138,22 @@ jobs:
       - name: Grant GitHub Actions access to EKS
         run: |
           kubectl patch configmap aws-auth -n kube-system --patch \
-          '{"data":{"mapRoles":"- rolearn: arn:aws:iam::468582173998:role/project-bedrock-cluster-node-role\n  username: system:node:{{EC2PrivateDNSName}}\n  groups:\n  - system:bootstrappers\n  - system:nodes\n- rolearn: arn:aws:iam::468582173998:role/github-actions-bedrock\n  username: github-actions\n  groups:\n  - system:masters\n"}}' \
-          --validate=false
+          '{"data":{"mapRoles":"- rolearn: arn:aws:iam::468582173998:role/project-bedrock-cluster-node-role\n  username: system:node:{{EC2PrivateDNSName}}\n  groups:\n  - system:bootstrappers\n  - system:nodes\n- rolearn: arn:aws:iam::468582173998:role/github-actions-bedrock\n  username: github-actions\n  groups:\n  - system:masters\n"}}'
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace retail-app --dry-run=client -o yaml | kubectl apply -f - --validate=false
+          kubectl create namespace retail-app --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f ../k8s/db-secrets.yaml --validate=false
-          kubectl apply -f ../k8s/rbac.yaml --validate=false
-          kubectl apply -f ../k8s/ingress.yaml --validate=false
+          kubectl apply -f ../k8s/db-secrets.yaml
+          kubectl apply -f ../k8s/rbac.yaml
+          kubectl apply -f ../k8s/ingress.yaml
 
       - name: Update aws-auth for dev-view user
         run: |
           kubectl patch configmap aws-auth -n kube-system --patch \
-          '{"data":{"mapUsers":"- userarn: arn:aws:iam::468582173998:user/bedrock-dev-view\n  username: bedrock-dev-view\n  groups:\n  - view\n"}}' \
-          --validate=false
+          '{"data":{"mapUsers":"- userarn: arn:aws:iam::468582173998:user/bedrock-dev-view\n  username: bedrock-dev-view\n  groups:\n  - view\n"}}'
 
       - name: Build Helm dependencies
         working-directory: k8s/retail-store-sample-app/src/app/chart

@@ -1,4 +1,4 @@
-kname: Project Bedrock CI/CD
+name: Project Bedrock CI/CD
 
 on:
   push:

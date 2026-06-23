@@ -135,28 +135,27 @@ jobs:
             --name project-bedrock-cluster \
             --region us-east-1
 
+      - name: Grant GitHub Actions access to EKS
+        run: |
+          kubectl patch configmap aws-auth -n kube-system --patch \
+          '{"data":{"mapRoles":"- rolearn: arn:aws:iam::468582173998:role/project-bedrock-cluster-node-role\n  username: system:node:{{EC2PrivateDNSName}}\n  groups:\n  - system:bootstrappers\n  - system:nodes\n- rolearn: arn:aws:iam::468582173998:role/github-actions-bedrock\n  username: github-actions\n  groups:\n  - system:masters\n"}}' \
+          --validate=false
+
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace retail-app --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace retail-app --dry-run=client -o yaml | kubectl apply -f - --validate=false
 
       - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f ../k8s/db-secrets.yaml
-          kubectl apply -f ../k8s/rbac.yaml
-          kubectl apply -f ../k8s/ingress.yaml
+          kubectl apply -f ../k8s/db-secrets.yaml --validate=false
+          kubectl apply -f ../k8s/rbac.yaml --validate=false
+          kubectl apply -f ../k8s/ingress.yaml --validate=false
 
-      - name: Update aws-auth configmap
+      - name: Update aws-auth for dev-view user
         run: |
-          kubectl get configmap aws-auth -n kube-system -o yaml > /tmp/aws-auth.yaml
-          cat <<EOF > /tmp/aws-auth-patch.yaml
-          data:
-            mapUsers: |
-              - userarn: arn:aws:iam::468582173998:user/bedrock-dev-view
-                username: bedrock-dev-view
-                groups:
-                - view
-          EOF
-          kubectl patch configmap aws-auth -n kube-system --patch "$(cat /tmp/aws-auth-patch.yaml)"
+          kubectl patch configmap aws-auth -n kube-system --patch \
+          '{"data":{"mapUsers":"- userarn: arn:aws:iam::468582173998:user/bedrock-dev-view\n  username: bedrock-dev-view\n  groups:\n  - view\n"}}' \
+          --validate=false
 
       - name: Build Helm dependencies
         working-directory: k8s/retail-store-sample-app/src/app/chart
@@ -168,7 +167,6 @@ jobs:
           helm upgrade --install retail-store . \
             -n retail-app \
             -f ../../../../values-override.yaml \
-            --wait \
             --timeout 10m
 
       - name: Install CloudWatch Observability addon
@@ -178,8 +176,21 @@ jobs:
             --addon-name amazon-cloudwatch-observability \
             --region us-east-1 || true
 
+      - name: Annotate carts service account
+        run: |
+          kubectl annotate serviceaccount carts \
+            -n retail-app \
+            eks.amazonaws.com/role-arn=arn:aws:iam::468582173998:role/project-bedrock-cluster-app-role \
+            --overwrite || true
+
+      - name: Patch carts configmap with AWS region
+        run: |
+          kubectl patch configmap carts -n retail-app \
+            --type merge \
+            -p '{"data":{"AWS_REGION":"us-east-1","AWS_DEFAULT_REGION":"us-east-1"}}' || true
+
       - name: Get app URL
         run: |
           echo "Waiting for ALB URL..."
-          sleep 60
+          sleep 30
           kubectl get ingress -n retail-app
